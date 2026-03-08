@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>시그니처 블렌드 설계 완료</title>
+        <link rel="stylesheet" href="assets/common.css">
+    <style>
+        :root {
+            --bg-color: #121212;
+            --text-main: #f5f5f5;
+            --text-sub: #a0a0a0;
+            --accent-color: #d4af37;
+            --card-bg: #1e1e1e;
+        }
+
+        body { margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; background-color: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding-bottom: 80px; }
+        .header { text-align: center; margin: 60px 0 30px; padding: 0 20px; }
+        .celebrate-icon { font-size: 3rem; margin-bottom: 10px; }
+        .title { font-size: 2.2rem; font-weight: 700; margin: 0 0 10px 0; color: var(--accent-color); }
+        .subtitle { font-size: 1.1rem; color: var(--text-sub); line-height: 1.5; }
+        .roast-progress {
+            margin: 22px auto 0;
+            width: min(760px, 100%);
+            background: linear-gradient(180deg, rgba(212, 175, 55, 0.08), rgba(212, 175, 55, 0.03));
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            border-radius: 14px;
+            padding: 14px 16px 18px;
+            box-sizing: border-box;
+        }
+        .roast-title {
+            color: #d9c48a;
+            font-size: 0.9rem;
+            margin-bottom: 18px;
+            letter-spacing: 0.4px;
+        }
+        .track {
+            position: relative;
+            height: 10px;
+            border-radius: 99px;
+            background: #2e2e32;
+            overflow: visible;
+            margin-top: 4px;
+        }
+        .track-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #5b4a1a 0%, #d4af37 50%, #f3dea0 100%);
+            opacity: 0.9;
+        }
+        .truck {
+            position: absolute;
+            top: -15px;
+            left: 0;
+            font-size: 1.3rem;
+            line-height: 1;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));
+            transform: scaleX(-1);
+            animation: drive 5.2s ease-in-out infinite;
+        }
+        .steps {
+            margin-top: 12px;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .step {
+            font-size: 0.86rem;
+            color: #b9b9bf;
+            padding: 6px 8px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.02);
+        }
+        .step span { margin-right: 5px; }
+        .step.active {
+            color: #f3e2ad;
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            background: rgba(212, 175, 55, 0.13);
+            animation: pulse 1.4s ease-in-out infinite;
+        }
+        @keyframes drive {
+            0% { left: -2%; }
+            50% { left: 48%; }
+            100% { left: 94%; }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.62; }
+        }
+
+        .result-container { display: flex; gap: 30px; max-width: 1000px; width: 100%; padding: 0 20px; box-sizing: border-box; flex-wrap: wrap; justify-content: center; }
+        
+        .blend-card { flex: 1; min-width: 320px; background-color: var(--card-bg); border: 1px solid #333; border-radius: 12px; padding: 40px 30px; box-shadow: 0 15px 30px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
+        .blend-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 5px; background: linear-gradient(90deg, #d4af37, #f3e5ab); }
+        
+        .blend-label { font-size: 0.9rem; color: var(--accent-color); font-weight: 600; letter-spacing: 2px; margin-bottom: 10px; display: inline-block; border: 1px solid var(--accent-color); padding: 4px 10px; border-radius: 20px; }
+        .blend-name { font-size: 2rem; font-weight: 700; margin: 0 0 10px 0; }
+        .blend-ratio { font-size: 0.95rem; color: #888; margin-bottom: 20px; font-weight: 600; }
+        .blend-desc { font-size: 1rem; color: #ccc; line-height: 1.6; margin-bottom: 30px; }
+
+        .tasting-note { margin-bottom: 30px; }
+        .note-item { margin-bottom: 15px; }
+        .note-label { display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--text-sub); margin-bottom: 5px; }
+        .note-bar-bg { width: 100%; height: 8px; background-color: #333; border-radius: 4px; overflow: hidden; }
+        .note-bar-fill { height: 100%; background-color: var(--accent-color); border-radius: 4px; transition: width 1s cubic-bezier(0.25, 0.8, 0.25, 1); }
+
+        .action-card { flex: 1; min-width: 320px; display: flex; flex-direction: column; gap: 20px; }
+        .info-box { background-color: var(--card-bg); border: 1px solid #333; border-radius: 12px; padding: 30px; }
+        .info-title { font-size: 1.2rem; font-weight: 600; margin: 0 0 15px 0; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        
+        .price-text { font-size: 1.5rem; font-weight: 700; color: var(--accent-color); margin-bottom: 5px; }
+        .price-sub { font-size: 0.9rem; color: var(--text-sub); line-height: 1.4; }
+        .quote-summary { display: flex; flex-direction: column; gap: 14px; margin-top: 6px; }
+        .quote-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #3f3f3f;
+        }
+        .quote-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .quote-label {
+            font-size: 0.88rem;
+            color: #b8b8b8;
+            white-space: nowrap;
+            word-break: keep-all;
+        }
+        .quote-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+            text-align: right;
+            white-space: nowrap;
+            word-break: keep-all;
+        }
+        .quote-value.price {
+            color: var(--accent-color);
+            font-size: 1.42rem;
+            letter-spacing: -0.2px;
+            font-variant-numeric: tabular-nums;
+        }
+        .vat-note {
+            font-size: 0.76em;
+            font-weight: 700;
+            color: #e5cc7a;
+            margin-left: 2px;
+            white-space: nowrap;
+        }
+        .quote-note {
+            margin-top: 14px;
+            padding: 12px 14px;
+            background: rgba(212, 175, 55, 0.08);
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            border-radius: 10px;
+            color: #e6d5a0;
+            font-size: 0.92rem;
+            line-height: 1.45;
+        }
+        .request-btn {
+            margin-top: 18px;
+            width: 100%;
+            padding: 14px 16px;
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .request-btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-content {
+            width: 100%;
+            max-width: 560px;
+            max-height: 90vh;
+            overflow: auto;
+            background-color: #1c1c1f;
+            border: 1px solid #3b3b40;
+            border-radius: 12px;
+            padding: 24px;
+            box-sizing: border-box;
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .modal-title { margin: 0; font-size: 1.25rem; color: #fff; }
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 8px;
+            background: #2a2a2f;
+            color: #ddd;
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+        .modal-hint { margin: 0 0 18px; color: #b6b6bc; font-size: 0.9rem; }
+        .form-grid { display: grid; gap: 12px; }
+        .form-row { display: grid; gap: 8px; }
+        .form-row label { font-size: 0.86rem; color: #d2d2d7; font-weight: 600; }
+        .form-row input {
+            width: 100%;
+            height: 44px;
+            box-sizing: border-box;
+            border-radius: 8px;
+            border: 1px solid #3b3b41;
+            background: #141417;
+            color: #fff;
+            padding: 0 12px;
+            font-size: 0.95rem;
+        }
+        .address-inline { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+        .search-btn {
+            height: 44px;
+            padding: 0 14px;
+            border-radius: 8px;
+            border: 1px solid #4e4630;
+            background: #2a2416;
+            color: #f2d58a;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .submit-request-btn {
+            margin-top: 8px;
+            width: 100%;
+            height: 46px;
+            border: none;
+            border-radius: 10px;
+            background: var(--accent-color);
+            color: #121212;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .request-status {
+            margin-top: 10px;
+            min-height: 20px;
+            font-size: 0.88rem;
+            color: #bfbfc7;
+        }
+
+        .restart-wrap { margin-top: 34px; width: 100%; max-width: 1000px; padding: 0 20px; box-sizing: border-box; }
+        .restart-btn {
+            width: 100%;
+            padding: 14px;
+            background-color: transparent;
+            color: var(--text-sub);
+            border: 1px solid #555;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .restart-btn:hover { border-color: var(--accent-color); color: #fff; background-color: rgba(212, 175, 55, 0.08); }
+        @media (prefers-reduced-motion: reduce) {
+            .truck, .step.active { animation: none; }
+        }
+        @media (max-width: 640px) {
+            .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="celebrate-icon">🎉</div>
+        <h1 class="title">맞춤형 R&D 설계가 완료되었습니다</h1>
+        <p class="subtitle">입력해주신 매장 환경과 타겟 고객의 취향을 분석하여<br>가장 이상적인 밸런스의 커피 프로파일을 도출했습니다.</p>
+        <div class="roast-progress" aria-label="로스팅 및 배송 진행 안내">
+            <div class="roast-title">방금 로스팅한 원두를 샘플 포장 후 배송 준비 중입니다.</div>
+            <div class="track">
+                <div class="track-fill"></div>
+                <div class="truck">🚚</div>
+            </div>
+            <div class="steps">
+                <div class="step active"><span>🏭</span>로스팅 완료</div>
+                <div class="step active"><span>📦</span>샘플 포장</div>
+                <div class="step active"><span>🚚</span>출고 준비</div>
+                <div class="step active"><span>☕</span>카페 도착 예정</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="result-container">
+        <div class="blend-card">
+            <div class="blend-label">사장님 매장 전용 프로파일 도출</div>
+            <h2 class="blend-name" id="resultName">블렌드 분석 중...</h2>
+            <div class="blend-ratio" id="resultRatio">배합비 계산 중...</div>
+            <p class="blend-desc" id="resultDesc">선택하신 데이터를 기반으로 최적의 맛을 조합했습니다.</p>
+
+            <div class="tasting-note">
+                <div class="note-item">
+                    <div class="note-label"><span>산미 (Acidity)</span><span id="scoreAcidity">0/10</span></div>
+                    <div class="note-bar-bg"><div class="note-bar-fill" id="barAcidity" style="width: 0%;"></div></div>
+                </div>
+                <div class="note-item">
+                    <div class="note-label"><span>바디감 (Body)</span><span id="scoreBody">0/10</span></div>
+                    <div class="note-bar-bg"><div class="note-bar-fill" id="barBody" style="width: 0%;"></div></div>
+                </div>
+                <div class="note-item">
+                    <div class="note-label"><span>단맛 (Sweetness)</span><span id="scoreSweet">0/10</span></div>
+                    <div class="note-bar-bg"><div class="note-bar-fill" id="barSweet" style="width: 0%;"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-card">
+            <div class="info-box">
+                <h3 class="info-title">📊 납품 단가 견적 (1kg 포장 기준)</h3>
+                <div class="quote-summary">
+                    <div class="quote-row">
+                        <div class="quote-label">선택한 원두</div>
+                        <div id="selectedBeanText" class="quote-value">확인 중...</div>
+                    </div>
+                    <div class="quote-row">
+                        <div class="quote-label">해당 원두의 납품 가격</div>
+                        <div id="deliveryPriceText" class="quote-value price">단가 확인 중...</div>
+                    </div>
+                </div>
+                <div id="deliveryPriceSub" class="quote-note">
+                    해당 원두 가격은 공급계약 체결시 1년간 변동이 없습니다.
+                </div>
+                <button type="button" class="request-btn" id="openSampleRequestBtn">샘플 원두 발송 요청</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="restart-wrap">
+        <button class="restart-btn" onclick="goHome()">처음으로 돌아가기</button>
+    </div>
+
+    <div id="shippingModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="shippingModalTitle">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="shippingModalTitle" class="modal-title">샘플 원두 발송 요청</h3>
+                <button type="button" class="modal-close" id="closeShippingModalBtn">×</button>
+            </div>
+            <p class="modal-hint">샘플 원두는 착불로 발송됩니다. 정확한 배송을 위해 주소를 입력해 주세요.</p>
+            <form id="shippingForm" class="form-grid">
+                <div class="form-row">
+                    <label for="receiverName">수령인</label>
+                    <input id="receiverName" type="text" required>
+                </div>
+                <div class="form-row">
+                    <label for="receiverPhone">연락처</label>
+                    <input id="receiverPhone" type="tel" required>
+                </div>
+                <div class="form-row">
+                    <label for="shippingPostcode">우편번호</label>
+                    <div class="address-inline">
+                        <input id="shippingPostcode" type="text" readonly required>
+                        <button type="button" class="search-btn" id="searchAddressBtn">주소검색</button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label for="shippingAddress">기본 주소</label>
+                    <input id="shippingAddress" type="text" readonly required>
+                </div>
+                <div class="form-row">
+                    <label for="shippingDetail">상세 주소</label>
+                    <input id="shippingDetail" type="text" required>
+                </div>
+                <button type="submit" class="submit-request-btn">착불 샘플 발송 요청하기</button>
+                <div id="shippingRequestStatus" class="request-status" aria-live="polite"></div>
+            </form>
+        </div>
+    </div>
+
+   <script src="https://t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+   <script src="assets/common.js"></script>
+    <script>
+        const userFlavorChoice = appStore.get('selectedFlavor', 'balanced');
+        const userVolumeChoice = appStore.get('step4_volume', '10_to_30');
+        const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwi7fmwLSD7QwN7K-BBFGFcetwOcUc9oKMOHVQnM-_8k3oP7iEntelq_8K3zZxKypJA/exec';
+
+        const nameEl = document.getElementById('resultName');
+        const ratioEl = document.getElementById('resultRatio');
+        const descEl = document.getElementById('resultDesc');
+        const barAcidity = document.getElementById('barAcidity');
+        const scoreAcidity = document.getElementById('scoreAcidity');
+        const barBody = document.getElementById('barBody');
+        const scoreBody = document.getElementById('scoreBody');
+        const barSweet = document.getElementById('barSweet');
+        const scoreSweet = document.getElementById('scoreSweet');
+        const selectedBeanTextEl = document.getElementById('selectedBeanText');
+        const deliveryPriceTextEl = document.getElementById('deliveryPriceText');
+        const deliveryPriceSubEl = document.getElementById('deliveryPriceSub');
+        const openSampleRequestBtn = document.getElementById('openSampleRequestBtn');
+        const shippingModal = document.getElementById('shippingModal');
+        const closeShippingModalBtn = document.getElementById('closeShippingModalBtn');
+        const searchAddressBtn = document.getElementById('searchAddressBtn');
+        const shippingForm = document.getElementById('shippingForm');
+        const shippingRequestStatus = document.getElementById('shippingRequestStatus');
+        const receiverNameEl = document.getElementById('receiverName');
+        const receiverPhoneEl = document.getElementById('receiverPhone');
+        const shippingPostcodeEl = document.getElementById('shippingPostcode');
+        const shippingAddressEl = document.getElementById('shippingAddress');
+        const shippingDetailEl = document.getElementById('shippingDetail');
+
+        const volumeLabelMap = {
+            under_10: '10kg 미만',
+            '10_to_30': '10kg ~ 30kg',
+            over_30: '30kg 이상'
+        };
+        const localPriceFallbackByFlavor = {
+            nutty_medium: { under_10: 30000, '10_to_30': 28500, over_30: 27500 },
+            balanced: { under_10: 28000, '10_to_30': 27500, over_30: 27000 },
+            floral_acidity: { under_10: 29000, '10_to_30': 28000, over_30: 27500 },
+            decaf: { under_10: 33000, '10_to_30': 30000, over_30: 29000 }
+        };
+
+        function pickFirst(obj, keys) {
+            for (let i = 0; i < keys.length; i += 1) {
+                const value = obj[keys[i]];
+                if (value !== undefined && value !== null && String(value).trim() !== '') {
+                    return value;
+                }
+            }
+            return null;
+        }
+
+        function normalizePriceText(value) {
+            const raw = String(value).trim();
+            if (!raw) return '';
+
+            const numberOnly = raw.replace(/[^0-9]/g, '');
+            if (numberOnly && numberOnly.length === raw.length) {
+                const num = Number(numberOnly);
+                if (!Number.isNaN(num)) {
+                    return num.toLocaleString('ko-KR') + '원';
+                }
+            }
+            return raw;
+        }
+
+        function resolveSupplyPrice(data, volumeKey) {
+            const priceKeyMap = {
+                under_10: ['price_under_10', 'priceUnder10', 'under_10_price', 'H', 'h', 'price_h', 'priceH'],
+                '10_to_30': ['price_10_to_30', 'price10to30', 'mid_price', 'I', 'i', 'price_i', 'priceI'],
+                over_30: ['price_over_30', 'priceOver30', 'over_30_price', 'J', 'j', 'price_j', 'priceJ']
+            };
+
+            const keys = priceKeyMap[volumeKey] || priceKeyMap['10_to_30'];
+            const fromRoot = pickFirst(data, keys);
+            if (fromRoot !== null) return fromRoot;
+
+            if (data.prices && typeof data.prices === 'object') {
+                const fromPrices = pickFirst(data.prices, keys.concat([volumeKey]));
+                if (fromPrices !== null) return fromPrices;
+            }
+
+            const fallbackByFlavor = localPriceFallbackByFlavor[userFlavorChoice];
+            if (fallbackByFlavor && fallbackByFlavor[volumeKey] !== undefined) {
+                return fallbackByFlavor[volumeKey];
+            }
+            return null;
+        }
+
+        function renderSupplyPrice(data) {
+            const rawPrice = resolveSupplyPrice(data, userVolumeChoice);
+            const volumeLabel = volumeLabelMap[userVolumeChoice] || volumeLabelMap['10_to_30'];
+
+            if (rawPrice === null) {
+                deliveryPriceTextEl.innerHTML = '단가 별도 협의<span class="vat-note">(부가세 별도)</span>';
+                deliveryPriceSubEl.innerText = '해당 원두 가격은 공급계약 체결시 1년간 변동이 없습니다.\n현재는 담당자가 ' + volumeLabel + ' 구간 기준으로 별도 안내드립니다.';
+                return;
+            }
+
+            deliveryPriceTextEl.innerHTML = normalizePriceText(rawPrice) + '<span class="vat-note">(부가세 별도)</span>';
+            deliveryPriceSubEl.innerText = '해당 원두 가격은 공급계약 체결시 1년간 변동이 없습니다.\n(선택 구간: ' + volumeLabel + ')';
+        }
+
+        function setLoadingState() {
+            nameEl.innerText = '데이터를 불러오는 중...';
+            ratioEl.innerText = '';
+            descEl.innerText = '';
+        }
+
+        function setErrorState(title, message) {
+            nameEl.innerText = title;
+            ratioEl.innerText = '';
+            descEl.innerText = message;
+        }
+
+        function renderResult(data) {
+            nameEl.innerText = data.name;
+            ratioEl.innerText = data.ratio || '';
+            descEl.innerText = data.desc || '';
+            selectedBeanTextEl.innerText = data.name || '-';
+            renderSupplyPrice(data);
+
+            setTimeout(function () {
+                barAcidity.style.width = ((data.acidity || 0) * 10) + '%';
+                scoreAcidity.innerText = (data.acidity || 0) + '/10';
+                barBody.style.width = ((data.body || 0) * 10) + '%';
+                scoreBody.innerText = (data.body || 0) + '/10';
+                barSweet.style.width = ((data.sweet || 0) * 10) + '%';
+                scoreSweet.innerText = (data.sweet || 0) + '/10';
+            }, 300);
+        }
+
+        function fetchResult() {
+            return fetch(GOOGLE_APP_SCRIPT_URL + '?flavor=' + encodeURIComponent(userFlavorChoice))
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    if (!data || !data.name) {
+                        throw new Error('유효한 결과 데이터가 없습니다.');
+                    }
+                    return data;
+                });
+        }
+
+        function loadResult() {
+            setLoadingState();
+
+            const prefetched = appStore.getPrefetchedResult(userFlavorChoice);
+            if (prefetched) {
+                renderResult(prefetched);
+                appStore.clearResultCache();
+                return;
+            }
+
+            fetchResult()
+                .then(function (data) {
+                    renderResult(data);
+                })
+                .catch(function (error) {
+                    console.error('데이터 통신 에러:', error);
+                    setErrorState('통신 지연', '서버 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+                });
+        }
+
+        loadResult();
+
+        function openShippingModal() {
+            shippingModal.classList.add('show');
+            shippingRequestStatus.textContent = '';
+            receiverNameEl.focus();
+        }
+
+        function closeShippingModal() {
+            shippingModal.classList.remove('show');
+        }
+
+        function openAddressSearch() {
+            if (!window.kakao || !window.kakao.Postcode) {
+                shippingRequestStatus.textContent = '주소검색 모듈을 불러오지 못했습니다. 네트워크 상태를 확인해 주세요.';
+                return;
+            }
+
+            new kakao.Postcode({
+                oncomplete: function (data) {
+                    let addr = '';
+                    let extraAddr = '';
+
+                    if (data.userSelectedType === 'R') {
+                        addr = data.roadAddress;
+                    } else {
+                        addr = data.jibunAddress;
+                    }
+
+                    if (data.userSelectedType === 'R') {
+                        if (data.bname && /[동|로|가]$/g.test(data.bname)) {
+                            extraAddr += data.bname;
+                        }
+                        if (data.buildingName && data.apartment === 'Y') {
+                            extraAddr += (extraAddr ? ', ' + data.buildingName : data.buildingName);
+                        }
+                        if (extraAddr) {
+                            addr += ' (' + extraAddr + ')';
+                        }
+                    }
+
+                    shippingPostcodeEl.value = data.zonecode || '';
+                    shippingAddressEl.value = addr;
+                    shippingDetailEl.focus();
+                }
+            }).open();
+        }
+
+        openSampleRequestBtn.addEventListener('click', openShippingModal);
+        closeShippingModalBtn.addEventListener('click', closeShippingModal);
+        searchAddressBtn.addEventListener('click', openAddressSearch);
+
+        shippingModal.addEventListener('click', function (event) {
+            if (event.target === shippingModal) {
+                closeShippingModal();
+            }
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                closeShippingModal();
+            }
+        });
+
+        shippingForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+            shippingRequestStatus.textContent = '발송 요청이 접수되었습니다. 샘플 원두는 착불로 발송됩니다.';
+            setTimeout(function () {
+                closeShippingModal();
+            }, 900);
+        });
+
+        function goHome() {
+            appStore.clearFlowData();
+            appStore.clearLeadData();
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
