@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>프로 모드 - 로스팅 프로파일 시뮬레이터</title>
+    <link rel="stylesheet" href="assets/common.css">
+    <style>
+        :root {
+            --bg: #090b12;
+            --panel: #121726;
+            --panel-soft: #161d2f;
+            --line: #2e3449;
+            --text: #f4f5f8;
+            --sub: #9ea7c2;
+            --accent: #d4af37;
+            --bean: #8ab4ff;
+            --inner: #f472b6;
+            --drum: #f6e2a2;
+            --ror: #94f2d3;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at 20% 0%, rgba(138,180,255,0.08), transparent 40%),
+                radial-gradient(circle at 90% 100%, rgba(212,175,55,0.07), transparent 42%),
+                var(--bg);
+            color: var(--text);
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        }
+
+        .wrap {
+            width: min(1160px, 100%);
+            margin: 0 auto;
+            padding: 24px 20px 36px;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .back-btn {
+            border: 1px solid #3f455f;
+            background: transparent;
+            color: #d8dcec;
+            border-radius: 10px;
+            padding: 9px 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .title-wrap h1 {
+            margin: 0;
+            font-size: 1.6rem;
+            letter-spacing: 0.3px;
+        }
+        .title-wrap p {
+            margin: 6px 0 0;
+            color: var(--sub);
+            font-size: 0.95rem;
+        }
+
+        .stats {
+            margin-top: 14px;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .stat {
+            background: linear-gradient(160deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 12px;
+        }
+        .stat .k {
+            color: var(--sub);
+            font-size: 0.78rem;
+            margin-bottom: 6px;
+        }
+        .stat .v {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .screen {
+            margin-top: 18px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 18px;
+            box-shadow: 0 18px 34px rgba(0,0,0,0.45);
+        }
+        .chart-shell {
+            display: grid;
+            gap: 12px;
+        }
+        .chart-card {
+            border: 1px solid #2f3650;
+            border-radius: 14px;
+            background: linear-gradient(180deg, #131a2a, #101626);
+            padding: 10px 12px 12px;
+        }
+        .chart-label {
+            font-size: 0.82rem;
+            color: #bac3dd;
+            margin: 0 0 8px;
+        }
+        canvas {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 10px;
+            font-size: 0.83rem;
+            color: #c8cfe4;
+        }
+        .legend span::before {
+            content: '';
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+            vertical-align: -1px;
+        }
+        .l-bean::before { background: var(--bean); }
+        .l-inner::before { background: var(--inner); }
+        .l-drum::before { background: var(--drum); }
+        .l-ror::before { background: var(--ror); }
+
+        .controls {
+            margin-top: 16px;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .control {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: var(--panel-soft);
+            padding: 12px;
+        }
+        .control .name {
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+            font-weight: 700;
+        }
+        .control .time {
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 0.98rem;
+            margin-bottom: 10px;
+        }
+        .control input[type='range'] {
+            width: 100%;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+        .control .hint {
+            margin-top: 8px;
+            font-size: 0.78rem;
+            color: var(--sub);
+        }
+
+        .actions {
+            margin-top: 14px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        .btn {
+            border: 1px solid var(--line);
+            background: transparent;
+            color: #d6dbec;
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        @media (max-width: 900px) {
+            .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .controls { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="topbar">
+            <button class="back-btn" type="button" onclick="window.location.href='index.html'">← 홈으로</button>
+            <div class="title-wrap">
+                <h1>프로 모드 로스팅 시뮬레이터</h1>
+                <p>실제 장비 인터페이스 느낌으로 구간 비율을 조정해 로스팅 프로파일을 설계합니다.</p>
+            </div>
+            <div></div>
+        </div>
+
+        <div class="stats">
+            <div class="stat"><div class="k">Dry</div><div class="v" id="drySpan">00:00 ~ 03:00</div></div>
+            <div class="stat"><div class="k">Maillard</div><div class="v" id="mailardSpan">03:00 ~ 07:30</div></div>
+            <div class="stat"><div class="k">Develop (1차 크랙)</div><div class="v" id="developSpan">07:30 ~ 08:30</div></div>
+            <div class="stat"><div class="k">총 로스팅 시간</div><div class="v" id="totalSpan">10:00</div></div>
+        </div>
+
+        <div class="screen">
+            <div class="chart-shell">
+                <div class="chart-card">
+                    <p class="chart-label">온도 프로파일</p>
+                    <canvas id="tempChart" width="1100" height="380"></canvas>
+                    <div class="legend">
+                        <span class="l-bean">원두 표면</span>
+                        <span class="l-inner">내부</span>
+                        <span class="l-drum">드럼 표면</span>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <p class="chart-label">RoR (온도 변화율)</p>
+                    <canvas id="rorChart" width="1100" height="210"></canvas>
+                    <div class="legend">
+                        <span class="l-ror">원두 표면 RoR</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="control">
+                    <div class="name">Dry 구간 종료 시점</div>
+                    <div class="time" id="dryValue">03:00</div>
+                    <input id="drySlider" type="range" min="120" max="360" step="10" value="180">
+                    <div class="hint">권장: 00:00 ~ 03:00</div>
+                </div>
+                <div class="control">
+                    <div class="name">Maillard 구간 종료 시점</div>
+                    <div class="time" id="mailardValue">07:30</div>
+                    <input id="mailardSlider" type="range" min="240" max="540" step="10" value="450">
+                    <div class="hint">권장: 03:00 ~ 07:30</div>
+                </div>
+                <div class="control">
+                    <div class="name">Develop 구간 종료 시점</div>
+                    <div class="time" id="developValue">08:30</div>
+                    <input id="developSlider" type="range" min="420" max="600" step="10" value="510">
+                    <div class="hint">권장: 07:30 ~ 08:30</div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn" type="button" id="resetBtn">기본값 복원</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const TOTAL_SEC = 600;
+            const MIN_GAP = 50;
+
+            const drySlider = document.getElementById('drySlider');
+            const mailardSlider = document.getElementById('mailardSlider');
+            const developSlider = document.getElementById('developSlider');
+            const resetBtn = document.getElementById('resetBtn');
+
+            const dryValue = document.getElementById('dryValue');
+            const mailardValue = document.getElementById('mailardValue');
+            const developValue = document.getElementById('developValue');
+            const drySpan = document.getElementById('drySpan');
+            const mailardSpan = document.getElementById('mailardSpan');
+            const developSpan = document.getElementById('developSpan');
+            const totalSpan = document.getElementById('totalSpan');
+
+            const tempCanvas = document.getElementById('tempChart');
+            const rorCanvas = document.getElementById('rorChart');
+            const tctx = tempCanvas.getContext('2d');
+            const rctx = rorCanvas.getContext('2d');
+
+            function pad(n) { return String(n).padStart(2, '0'); }
+            function fmt(sec) {
+                const m = Math.floor(sec / 60);
+                const s = sec % 60;
+                return pad(m) + ':' + pad(s);
+            }
+
+            function clampPhase() {
+                let dry = Number(drySlider.value);
+                let mailard = Number(mailardSlider.value);
+                let develop = Number(developSlider.value);
+
+                if (mailard <= dry + MIN_GAP) {
+                    mailard = dry + MIN_GAP;
+                }
+                if (develop <= mailard + MIN_GAP) {
+                    develop = mailard + MIN_GAP;
+                }
+                if (develop > TOTAL_SEC) {
+                    develop = TOTAL_SEC;
+                    if (mailard > develop - MIN_GAP) mailard = develop - MIN_GAP;
+                    if (dry > mailard - MIN_GAP) dry = mailard - MIN_GAP;
+                }
+
+                drySlider.value = dry;
+                mailardSlider.value = mailard;
+                developSlider.value = develop;
+            }
+
+            function readPhase() {
+                return {
+                    dry: Number(drySlider.value),
+                    mailard: Number(mailardSlider.value),
+                    develop: Number(developSlider.value)
+                };
+            }
+
+            function updateLabels(phase) {
+                dryValue.textContent = fmt(phase.dry);
+                mailardValue.textContent = fmt(phase.mailard);
+                developValue.textContent = fmt(phase.develop);
+
+                drySpan.textContent = fmt(0) + ' ~ ' + fmt(phase.dry);
+                mailardSpan.textContent = fmt(phase.dry) + ' ~ ' + fmt(phase.mailard);
+                developSpan.textContent = fmt(phase.mailard) + ' ~ ' + fmt(phase.develop);
+                totalSpan.textContent = fmt(TOTAL_SEC);
+            }
+
+            function phaseColorBands(ctx, area, phase) {
+                const xDry = area.x + (phase.dry / TOTAL_SEC) * area.w;
+                const xMail = area.x + (phase.mailard / TOTAL_SEC) * area.w;
+                const xDev = area.x + (phase.develop / TOTAL_SEC) * area.w;
+
+                ctx.fillStyle = 'rgba(122, 95, 38, 0.17)';
+                ctx.fillRect(area.x, area.y, xDry - area.x, area.h);
+
+                ctx.fillStyle = 'rgba(186, 122, 46, 0.15)';
+                ctx.fillRect(xDry, area.y, xMail - xDry, area.h);
+
+                ctx.fillStyle = 'rgba(212, 175, 55, 0.15)';
+                ctx.fillRect(xMail, area.y, xDev - xMail, area.h);
+            }
+
+            function drawGrid(ctx, area, yTicks, yMin, yMax) {
+                ctx.strokeStyle = '#31384f';
+                ctx.lineWidth = 1;
+                ctx.font = '12px Pretendard, sans-serif';
+                ctx.fillStyle = '#8e98b7';
+
+                for (let i = 0; i <= 10; i += 1) {
+                    const x = area.x + (i / 10) * area.w;
+                    ctx.beginPath();
+                    ctx.moveTo(x, area.y);
+                    ctx.lineTo(x, area.y + area.h);
+                    ctx.stroke();
+
+                    const sec = Math.round((TOTAL_SEC / 10) * i);
+                    ctx.fillText(fmt(sec), x - 15, area.y + area.h + 18);
+                }
+
+                for (let j = 0; j <= yTicks; j += 1) {
+                    const y = area.y + (j / yTicks) * area.h;
+                    ctx.beginPath();
+                    ctx.moveTo(area.x, y);
+                    ctx.lineTo(area.x + area.w, y);
+                    ctx.stroke();
+
+                    const value = Math.round(yMax - (j / yTicks) * (yMax - yMin));
+                    ctx.fillText(String(value), area.x - 30, y + 4);
+                }
+            }
+
+            function tempCurves(t, phase) {
+                const DROP_END_SEC = 60; // 01:00
+                const lerp = function (a, b, p) { return a + (b - a) * p; };
+                const smooth = function (p) { return p * p * (3 - 2 * p); };
+
+                // 요청 기준:
+                // 00:00 = 170 -> 01:00 = 100
+                // Dry 끝 = 165, Maillard 끝 = 190, 종료 = 220(고정)
+                let bean;
+                if (t <= DROP_END_SEC) {
+                    bean = lerp(170, 100, t / DROP_END_SEC);
+                } else if (t <= phase.dry) {
+                    const p = smooth((t - DROP_END_SEC) / (phase.dry - DROP_END_SEC));
+                    bean = lerp(100, 165, p);
+                } else if (t <= phase.mailard) {
+                    const p = smooth((t - phase.dry) / (phase.mailard - phase.dry));
+                    bean = lerp(165, 190, p);
+                } else if (t <= phase.develop) {
+                    const p = smooth((t - phase.mailard) / (phase.develop - phase.mailard));
+                    bean = lerp(190, 210, p);
+                } else {
+                    const p = smooth((t - phase.develop) / (TOTAL_SEC - phase.develop));
+                    bean = lerp(210, 220, p);
+                }
+
+                // 내부는 원두 표면 추세를 따라가되 완만하게 상승
+                const inner = Math.max(82, bean - 26 + Math.sin(t / 85) * 1.5);
+
+                // 드럼 표면: 90℃ -> 110℃ 범위에서 완만 상승 후 유지
+                let drum;
+                if (t <= phase.dry) {
+                    const p = smooth(t / phase.dry);
+                    drum = lerp(90, 100, p);
+                } else if (t <= phase.mailard) {
+                    const p = smooth((t - phase.dry) / (phase.mailard - phase.dry));
+                    drum = lerp(100, 108, p);
+                } else if (t <= phase.develop) {
+                    const p = smooth((t - phase.mailard) / (phase.develop - phase.mailard));
+                    drum = lerp(108, 110, p);
+                } else {
+                    const p = smooth((t - phase.develop) / (TOTAL_SEC - phase.develop));
+                    drum = lerp(110, 109, p);
+                }
+
+                drum = Math.min(110, Math.max(90, drum));
+                return { bean: bean, inner: inner, drum: drum };
+            }
+
+            function drawLine(ctx, area, arr, maxY, minY, color, width) {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = width;
+                ctx.beginPath();
+
+                arr.forEach(function (point, idx) {
+                    const x = area.x + (point.t / TOTAL_SEC) * area.w;
+                    const y = area.y + ((maxY - point.v) / (maxY - minY)) * area.h;
+                    if (idx === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+
+                ctx.stroke();
+            }
+
+            function drawMarkers(ctx, area, phase, maxY, minY) {
+                ctx.font = '12px Pretendard, sans-serif';
+                ctx.fillStyle = '#d6dbec';
+                ctx.strokeStyle = 'rgba(212,175,55,0.65)';
+                ctx.lineWidth = 1.3;
+
+                [phase.dry, phase.mailard, phase.develop].forEach(function (sec, idx) {
+                    const x = area.x + (sec / TOTAL_SEC) * area.w;
+                    ctx.beginPath();
+                    ctx.moveTo(x, area.y);
+                    ctx.lineTo(x, area.y + area.h);
+                    ctx.stroke();
+
+                    const curve = tempCurves(sec, phase);
+                    const y = area.y + ((maxY - curve.bean) / (maxY - minY)) * area.h;
+                    ctx.fillRect(x - 2, y - 2, 4, 4);
+
+                    const tag = idx === 0 ? 'Dry End' : idx === 1 ? 'Maillard End' : '1st Crack';
+                    ctx.fillText(tag, x + 6, area.y + 16 + idx * 14);
+                });
+            }
+
+            function drawTempChart(phase) {
+                const w = tempCanvas.width;
+                const h = tempCanvas.height;
+                const area = { x: 52, y: 20, w: w - 76, h: h - 60 };
+
+                tctx.clearRect(0, 0, w, h);
+                phaseColorBands(tctx, area, phase);
+                drawGrid(tctx, area, 5, 40, 260);
+
+                const beanSeries = [];
+                const innerSeries = [];
+                const drumSeries = [];
+                for (let t = 0; t <= TOTAL_SEC; t += 5) {
+                    const curve = tempCurves(t, phase);
+                    beanSeries.push({ t: t, v: curve.bean });
+                    innerSeries.push({ t: t, v: curve.inner });
+                    drumSeries.push({ t: t, v: curve.drum });
+                }
+
+                drawLine(tctx, area, beanSeries, 260, 40, getCss('--bean'), 3);
+                drawLine(tctx, area, innerSeries, 260, 40, getCss('--inner'), 2.5);
+                drawLine(tctx, area, drumSeries, 260, 40, getCss('--drum'), 2.3);
+                drawMarkers(tctx, area, phase, 260, 40);
+            }
+
+            function drawRorChart(phase) {
+                const w = rorCanvas.width;
+                const h = rorCanvas.height;
+                const area = { x: 52, y: 16, w: w - 76, h: h - 44 };
+
+                rctx.clearRect(0, 0, w, h);
+                phaseColorBands(rctx, area, phase);
+                drawGrid(rctx, area, 4, 0, 20);
+
+                const points = [];
+                for (let t = 0; t <= TOTAL_SEC; t += 5) {
+                    let base;
+                    if (t <= phase.dry) base = 13 - (t / phase.dry) * 6.5;
+                    else if (t <= phase.mailard) base = 6.5 - ((t - phase.dry) / (phase.mailard - phase.dry)) * 2.8;
+                    else if (t <= phase.develop) base = 3.7 - ((t - phase.mailard) / (phase.develop - phase.mailard)) * 1.4;
+                    else base = 2.2 - ((t - phase.develop) / (TOTAL_SEC - phase.develop + 1)) * 0.8;
+
+                    const noise = Math.sin(t / 17) * 0.25 + Math.cos(t / 43) * 0.2;
+                    points.push({ t: t, v: Math.max(0.7, base + noise) });
+                }
+
+                drawLine(rctx, area, points, 20, 0, getCss('--ror'), 2.6);
+            }
+
+            function getCss(name) {
+                return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+            }
+
+            function render() {
+                clampPhase();
+                const phase = readPhase();
+                updateLabels(phase);
+                drawTempChart(phase);
+                drawRorChart(phase);
+            }
+
+            [drySlider, mailardSlider, developSlider].forEach(function (el) {
+                el.addEventListener('input', render);
+            });
+
+            resetBtn.addEventListener('click', function () {
+                drySlider.value = 180;
+                mailardSlider.value = 450;
+                developSlider.value = 510;
+                render();
+            });
+
+            render();
+        })();
+    </script>
+</body>
+</html>
